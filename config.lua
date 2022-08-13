@@ -21,4 +21,6 @@ Config.MaxMoney = 20
 
 -- Set the name of Police Job for Notification
 Config.Police = "police"
+-- Set to True if using AdrenCAD & 911Script https://www.adrencad.com/
+Config.AdrenCAD = true
 

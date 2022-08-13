@@ -28,7 +28,27 @@ function failureGen()
 	return success
 end
 
+function notifyPolice()
+	local alertCoords = GetEntityCoords(PlayerPedId())
+	if Config.AdrenCAD then
+		callType = 'Theft'
+		description = 'Help! Someone just tried to Pickpocket me!'
+		location = alertCoords
+		TriggerEvent('911-script:createCall', callType, description, location)
+	else
+		local notification = {
+			title    = 'Theft',
+			subject  = '',
+			msg      ='Help! Someone just tried to Pickpocket me!'..alertCoords,
+			iconType = 1
+		}
 
+		TriggerServerEvent('esx_service:notifyAllInService', notification, 'police')
+	end
+end
+
+
+-- NPC Pickpocket
 local function pickNPCPocket()
 	print("TEST SUCCEEDED")
 	Citizen.CreateThread(function ()
@@ -52,6 +72,7 @@ local function pickNPCPocket()
 	Citizen.Wait(1000)
 	if failureGen() == false then
 		lib.cancelProgress()
+		notifyPolice()
 		exports['okokNotify']:Alert('PickPocket Failed', 'You Failed to Pickpocket. Police have been notified', 10000, 'error')
 	else
 		exports['okokNotify']:Alert('PickPocket Succeeded', 'You were able to Pickpocket.', 10000, 'success')
@@ -73,9 +94,6 @@ exports.qtarget:Ped({
 	distance = 10
 })
 
-
-
-
 lib.registerMenu({
     id = 'NPCpickPocket_Menu',
     title = 'PickPocket',
@@ -95,3 +113,45 @@ lib.registerMenu({
 		
 	end
 end)
+
+
+
+
+
+
+-- Utils
+function getStreetfromCoords(coords)
+    local zone = GetNameOfZone(coords.x, coords.y, coords.z);
+    local zoneLabel = GetLabelText(zone);
+    local hash1, hash2, heading;
+    local var1, var2 = GetStreetNameAtCoord(coords.x, coords.y, coords.z, Citizen.ResultAsInteger(), Citizen.ResultAsInteger())
+    hash1 = GetStreetNameFromHashKey(var1);
+    hash2 = GetStreetNameFromHashKey(var2);
+    heading = GetEntityHeading(PlayerPedId());
+    
+    for k, v in pairs(directions) do
+        if (math.abs(heading - v) < 22.5) then
+            heading = k;
+    
+            if (heading == 1) then
+                heading = 'N';
+                break;
+            end
+
+            break;
+        end
+    end
+
+    local street2;
+    if (hash2 == '') then
+        street2 = zoneLabel;
+    else
+        street2 = hash2..', '..zoneLabel;
+    end
+
+    print("Street: "..hash1)
+    print("zone: "..street2)
+    print("Direction: "..heading)
+
+    return {street=hash1, zone=street2, direction=heading}
+end
