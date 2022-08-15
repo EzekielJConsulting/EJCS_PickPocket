@@ -7,11 +7,11 @@ Config.NPCItems = {
     {label = "Cigarettes", item = "cigarette", maxCount = 12}
 }
 
-Config.MaxNPCMoney = 1000
+Config.MaxNPCMoney = 400
 
 -- Set Items that can NOT be taken from a Player
 Config.BlacklistedItems = {
-    "weapon_railgun"
+    "WEAPON_SNSPISTOL"
 }
 
 -- Set the Max amount of money that can be taken from a player
