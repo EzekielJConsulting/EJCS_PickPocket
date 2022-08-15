@@ -4,7 +4,7 @@ Citizen.CreateThread(function()
 		TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
 		Citizen.Wait(30)
 	end
-	ESX.RegisterServerCallback('ejcspp:getPlayerInventory', function(PlayerID, cb)
+	ESX.RegisterServerCallback('ejcspp:getPlayerInventory', function(source, PlayerID, cb)
 		print("Getting Player: "..PlayerID.." Inventory")
 		local xPlayer = ESX.GetPlayerFromId(PlayerID)
 		print (xPlayer)
@@ -15,8 +15,8 @@ Citizen.CreateThread(function()
 end)
 
 
-RegisterNetEvent('ejcspp:test')
-AddEventHandler('ejcspp:test', function(args,source)
+RegisterNetEvent('ejcspp:npcPocket')
+AddEventHandler('ejcspp:npcPocket', function(args,source)
 	print("player: ",source)
 	for index, value in ipairs(args) do
 		print(index, ". ", value)
