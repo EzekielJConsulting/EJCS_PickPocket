@@ -1,7 +1,3 @@
--- RegisterNetEvent('ejcspp:test')
--- AddEventHandler('ejcspp:test', function(data)
--- 	print(data.label, data.num, data.entity)
--- end)
 ESX = nil
 Citizen.CreateThread(function()
 	while ESX == nil do
@@ -43,33 +39,114 @@ function calcPercent(value, percent)
     return math.ceil(value * (percent/100))
 end
 
---NPC PickPocket
-local function pickNPCPocket()
-	print("TEST SUCCEEDED")
-	Citizen.CreateThread(function ()
-		if lib.progressBar({
-			duration = 3000,
-			label = 'Picking Pocket',
-			useWhileDead = false,
-			canCancel = true,
-		}) then
-			print("ProgressBar Complete")
-			amount = tostring(math.random(Config.MaxNPCMoney))
-			lib.setMenuOptions('NPCpickPocket_Menu', {label = 'Take Money', args={'money', amount}}, 2)
+
+-- Player PickPocket
+local function pickPlayerPocket(entity)
+	PlayerInv = {}
+	local bi_map = array_map(Config.BlacklistedItems)
+	local itemNames = {}
+
+	for item, data in pairs(exports.ox_inventory:Items()) do 
+		itemNames[item] = data.label
+	end
+	if IsPedAPlayer(entity) then 
+		Citizen.CreateThread(function ()
+			if lib.progressBar({
+				duration = 2000,
+				label = 'Picking Pocket',
+				useWhileDead = false,
+				canCancel = true,
+			}) then
+				print("test")
+				PlayerID = GetPlayerServerId(NetworkGetPlayerIndexFromPed(entity))
+				PlayerData = GetPlayerFromServerId(PlayerID)
+				print("Searching: "..tostring(PlayerID))
+				ESX.TriggerServerCallback('ejcspp:getPlayerInventory', function(playerInv)
+					if tostring(type(playerInv)) == "string" then
+						if playerInv == 'empty' then
+							exports['okokNotify']:Alert('Pockets Empty', 'This Person has nothing on them', 6000, 'error')
+						end
+					else
+						for k,v in pairs(playerInv) do 
+							if bi_map[v.name] then 
+								print(v.name.." is blacklisted")
+							else
+								table.insert(PlayerInv, {label=itemNames[v.name], item=v.name, count=v.count})
+							end
+						end
+						if tableLength(PlayerInv) > 0 then
+							randomItemID = math.random(1, tableLength(PlayerInv))
+							randomItem = PlayerInv[randomItemID]
+							maxItemCount = randomItem.count
+							if randomItem.item == 'money' then
+								if Config.MaxMoneyType == '%' then
+									maxItemCount = calcPercent(randomItem.count, Config.MaxMoney)
+								elseif Config.MaxMoneyType == '$' then
+									if randomItem.count > Config.MaxMoney then
+										maxItemCount = Config.MaxMoney
+									else
+										maxItemCount = randomItem.count
+									end
+								end
+							else
+								maxItemCount = randomItem.count
+							end
+							randomItemCount = math.random(1, maxItemCount)
+			
+							lib.setMenuOptions('PlayerpickPocket_Menu', {label = 'Take '..randomItem.label, args={randomItem.item, randomItemCount, PlayerID}, description= 'You can take '..randomItemCount..'x'..randomItem.label..". Be careful they will notice its missing"}, 2)
+							lib.showMenu('PlayerpickPocket_Menu')
+						else
+							exports['okokNotify']:Alert('Pockets Empty', 'This Person has nothing on them', 6000, 'error')
+						end
+					end
+				end,PlayerID)
+				
+			else print('fuck off quitter') end
+		end)
+		Citizen.Wait(1000)
+		if failureGen() == false then
+			lib.cancelProgress()
+			exports['okokNotify']:Alert('PickPocket Failed', 'You Failed to Pickpocket. Police have been notified', 10000, 'error')
+		else
+			exports['okokNotify']:Alert('PickPocket Succeeded', 'You were able to Pickpocket.', 10000, 'success')
+		end
+	end
+	-- for k,v in pairs(entity) do print("k:"..k.." V:"..v) end
 	
-			NPCItemID = math.random(1,tableLength(Config.NPCItems))
-			NPCItem = Config.NPCItems[NPCItemID]
-			NPCItemCount = tostring(math.random(1, NPCItem.maxCount))
-			lib.setMenuOptions('NPCpickPocket_Menu', {label = 'Take '..NPCItem['label'], args={NPCItem.item, NPCItemCount}}, 3)
-			lib.showMenu('NPCpickPocket_Menu')
-		else print('fuck off quitter') end
-	end)
-	Citizen.Wait(math.random(1000,3000))
-	if failureGen() == false then
-		lib.cancelProgress()
-		exports['okokNotify']:Alert('PickPocket Failed', 'You Failed to Pickpocket. Police have been notified', 10000, 'error')
+	
+end
+
+--NPC PickPocket
+local function pickNPCPocket(entity)
+	if IsPedAPlayer(entity) then 
+		pickPlayerPocket(entity)
 	else
-		exports['okokNotify']:Alert('PickPocket Succeeded', 'You were able to Pickpocket.', 10000, 'success')
+		print("TEST SUCCEEDED")
+		Citizen.CreateThread(function ()
+			if lib.progressBar({
+				duration = 3000,
+				label = 'Picking Pocket',
+				useWhileDead = false,
+				canCancel = true,
+			}) then
+				print("ProgressBar Complete")
+				amount = tostring(math.random(Config.MaxNPCMoney))
+				lib.setMenuOptions('NPCpickPocket_Menu', {label = 'Take Money', args={'money', amount}}, 2)
+		
+				NPCItemID = math.random(1,tableLength(Config.NPCItems))
+				NPCItem = Config.NPCItems[NPCItemID]
+				NPCItemCount = tostring(math.random(1, NPCItem.maxCount))
+				lib.setMenuOptions('NPCpickPocket_Menu', {label = 'Take '..NPCItem['label'], args={NPCItem.item, NPCItemCount}}, 3)
+				lib.showMenu('NPCpickPocket_Menu')
+			else print('fuck off quitter') end
+		end)
+		Citizen.Wait(math.random(1000,3000))
+		if failureGen() == false then
+			lib.cancelProgress()
+			exports['okokNotify']:Alert('PickPocket Failed', 'You Failed to Pickpocket. Police have been notified', 10000, 'error')
+		else
+			exports['okokNotify']:Alert('PickPocket Succeeded', 'You were able to Pickpocket.', 10000, 'success')
+		end
 	end
 	
 end
@@ -109,80 +186,7 @@ lib.registerMenu({
 end)
 
 
--- Player PickPocket
-local function pickPlayerPocket(entity)
-	print("TEST SUCCEEDED")
-	PlayerInv = {}
-	local bi_map = array_map(Config.BlacklistedItems)
-	local itemNames = {}
 
-	for item, data in pairs(exports.ox_inventory:Items()) do 
-		itemNames[item] = data.label
-	end
-	if IsPedAPlayer(entity) then 
-		
-		
-		Citizen.CreateThread(function ()
-			if lib.progressBar({
-				duration = 2000,
-				label = 'Picking Pocket',
-				useWhileDead = false,
-				canCancel = true,
-			}) then
-				PlayerID = GetPlayerServerId(NetworkGetPlayerIndexFromPed(entity))
-				PlayerData = GetPlayerFromServerId(PlayerID)
-				print("Searching: "..PlayerID)
-				ESX.TriggerServerCallback('ejcspp:getPlayerInventory',function(PlayerID, cb)
-					print(inv)
-					print(PlayerID)
-					playerInv = PlayerID
-					print(playerInv)
-				
-				for k,v in pairs(playerInv) do 
-					print(v.name)
-					if bi_map[v.name] then 
-						print(v.name.." is blacklisted")
-					else
-						table.insert(PlayerInv, {label=itemNames[v.name], item=v.name, count=v.count})
-					end
-				end
-				randomItemID = math.random(1, tableLength(PlayerInv))
-				randomItem = PlayerInv[randomItemID]
-				maxItemCount = randomItem.count
-				if randomItem.item == 'money' then
-					if Config.MaxMoneyType == '%' then
-						maxItemCount = calcPercent(randomItem.count, Config.MaxMoney)
-					elseif Config.MaxMoneyType == '$' then
-						if randomItem.count > Config.MaxMoney then
-							maxItemCount = Config.MaxMoney
-						else
-							maxItemCount = randomItem.count
-						end
-					end
-				else
-					maxItemCount = randomItem.count
-				end
-				print(maxItemCount)
-				randomItemCount = math.random(1, maxItemCount)
-
-				lib.setMenuOptions('PlayerpickPocket_Menu', {label = 'Take '..randomItem.label, args={randomItem.item, randomItemCount, PlayerID}}, 2)
-				lib.showMenu('PlayerpickPocket_Menu')
-				end)
-				
-			else print('fuck off quitter') end
-		end)
-		Citizen.Wait(1000)
-		if failureGen() == false then
-			lib.cancelProgress()
-			exports['okokNotify']:Alert('PickPocket Failed', 'You Failed to Pickpocket. Police have been notified', 10000, 'error')
-		else
-			exports['okokNotify']:Alert('PickPocket Succeeded', 'You were able to Pickpocket.', 10000, 'success')
-		end
-	end
-	-- for k,v in pairs(entity) do print("k:"..k.." V:"..v) end
-	
-	
-end
 
 exports.qtarget:Player({
 	options = {
